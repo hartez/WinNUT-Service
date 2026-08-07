@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="nutdotnet/NUTDotNetClient/NUTDotNetClient.csproj" />
+  <Project Path="nutdotnet/NUTDotNetShared/NUTDotNetShared.csproj" />
+  <Project Path="WinNUT-ClientService/WinNUT-ClientService.csproj" />
+</Solution>
