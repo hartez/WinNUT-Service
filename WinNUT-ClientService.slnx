@@ -2,6 +2,8 @@
   <Project Path="nutdotnet/NUTDotNetClient/NUTDotNetClient.csproj" />
   <Project Path="nutdotnet/NUTDotNetServer/NUTDotNetServer.csproj" />
   <Project Path="nutdotnet/NUTDotNetShared/NUTDotNetShared.csproj" />
-  <Project Path="WinNUT-ClientService.Tests/WinNUT-ClientService.Tests.csproj" Id="be7bd684-ccdf-4e08-bf4e-54e14334d58b" />
-  <Project Path="WinNUT-ClientService/WinNUT-ClientService.csproj" />
+  <Project Path="WinNUT.ClientGUI/WinNUT.ClientGUI.csproj" />
+  <Project Path="WinNUT.ClientService.Tests/WinNUT.ClientService.Tests.csproj" />
+  <Project Path="WinNUT.ClientService/WinNUT.ClientService.csproj" />
+  <Project Path="WinNUT.gPRC/WinNUT.gPRC.csproj" />
 </Solution>

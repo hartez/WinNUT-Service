@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option csharp_namespace = "WinNUT.gPRC";
+
+package clientGUI;
+
+service ClientGUI {
+	rpc Subscribe (SubscribeRequest) returns (stream Notification);
+	rpc RequestShutdownDelay (DelayRequest) returns (ShutdownNotification);
+}
+
+message SubscribeRequest {
+	string subscriber = 1;
+}
+
+message DelayRequest {
+}
+
+message Notification {
+	oneof NotificationType {
+		ShutdownNotification shutDown = 1;
+		StatusNotification status = 2;
+		DeviceInfo deviceInfo = 3;
+	}
+}
+
+message ShutdownNotification {
+	uint64 remaining = 1;
+} 
+
+// This needs a route for passing device info that doesn't change
+// Probably a map<string, string>
+// Throw in every variable that starts with device.
+
+message StatusNotification {
+	uint32 charge = 1;
+	string status = 3;
+}
+
+message DeviceInfo {
+	map<string, string> deviceAttributes = 1;
+}

@@ -9,11 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.83.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\nutdotnet\NUTDotNetClient\NUTDotNetClient.csproj" />
+    <ProjectReference Include="..\WinNUT.gPRC\WinNUT.gPRC.csproj" />
   </ItemGroup>
 </Project>
