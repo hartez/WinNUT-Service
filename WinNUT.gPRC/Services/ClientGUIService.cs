@@ -46,22 +46,23 @@ namespace WinNUT.gPRC.Services
 			return base.RequestShutdownDelay(request, context);
 		}
 
-		public async Task PushShutdownNotification()
+		public async Task PushShutdownNotification(ShutdownNotification notification)
 		{
-			if (_responseStream == null) { return; }
+			if (_responseStream == null) 
+			{ 
+				return; 
+			}
 
-			var x = Random.Shared.Next(0, 10000);
-
-			await _responseStream.WriteAsync(new Notification() { ShutDown = new ShutdownNotification() { Remaining = (ulong)x } });
+			await _responseStream.WriteAsync(new Notification() { ShutDown = notification });
 		}
 
 		public async Task PushStatusUpdate(StatusNotification notification)
 		{
 			_lastStatusUpdate = notification;
 
-			if (_responseStream == null) 
-			{ 
-				return; 
+			if (_responseStream == null)
+			{
+				return;
 			}
 
 			await _responseStream.WriteAsync(new Notification() { Status = notification });
@@ -71,9 +72,9 @@ namespace WinNUT.gPRC.Services
 		{
 			_deviceInfo = deviceInfo;
 
-			if (_responseStream == null) 
-			{ 
-				return; 
+			if (_responseStream == null)
+			{
+				return;
 			}
 
 			await _responseStream.WriteAsync(new Notification() { DeviceInfo = deviceInfo });

@@ -7,8 +7,6 @@ using Microsoft.Extensions.Logging.EventLog;
 using WinNUT.ClientService;
 using WinNUT.gPRC;
 using NUTDotNetClient;
-using System.Security.Cryptography;
-using Grpc.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,9 +22,13 @@ builder.Services.AddWindowsService(options =>
 LoggerProviderOptions.RegisterProviderOptions<
 	EventLogSettings, EventLogLoggerProvider>(builder.Services);
 
-var section = config.GetSection(nameof(NUTClientConfig));
-var nutClientConfig = section.Get<NUTClientConfig>() ?? new NUTClientConfig("localhost");
+var nutClientConfigSection = config.GetSection(nameof(NUTClientConfig));
+var nutClientConfig = nutClientConfigSection.Get<NUTClientConfig>() ?? new NUTClientConfig();
 builder.Services.AddSingleton(nutClientConfig);
+
+var monitorConfigSection = config.GetSection(nameof(MonitorConfig));
+var monitorConfig = monitorConfigSection.Get<MonitorConfig>() ?? new MonitorConfig();
+builder.Services.AddSingleton(monitorConfig);
 
 // The UPSMonitor will need an IClientGUIService (becuase we're using that for testing)
 // But we'll need the concrete implementation for MapGrpcService later on

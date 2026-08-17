@@ -32,7 +32,7 @@ public class ShutdownService : IShutdownService
 		}
 	}
 
-	public void InitiateShutdown(int delaySeconds)
+	public void InitiateShutdown(uint delaySeconds)
 	{
 		var startInfo = new ProcessStartInfo
 		{

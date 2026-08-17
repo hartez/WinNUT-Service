@@ -2,9 +2,9 @@
 {
 	public interface IClientGUIService
 	{
-		public void Shutdown();
-		public Task PushShutdownNotification();
-		public Task PushStatusUpdate(StatusNotification notification);
-		public Task PushDeviceInfo(DeviceInfo deviceInfo);
+		void Shutdown();
+		Task PushShutdownNotification(ShutdownNotification notification);
+		Task PushStatusUpdate(StatusNotification notification);
+		Task PushDeviceInfo(DeviceInfo deviceInfo);
 	}
 }

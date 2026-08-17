@@ -1,28 +1,28 @@
 using NUTDotNetClient;
 using NUTDotNetShared;
-using System.Runtime.CompilerServices;
 using WinNUT.gPRC;
-using WinNUT.gPRC.Services;
 
 namespace WinNUT.ClientService;
-
-public class UnsupportedUPSVariable(string name, VarFlags flags = VarFlags.None) : UPSVariable(name, flags)
-{
-}
 
 public class UPSMonitor
 {
 	readonly ClientUPS _ups;
 	readonly NUTClient _client;
+	private readonly MonitorConfig _config;
 	private readonly IClientGUIService _clientGUIService;
 	private readonly IShutdownService _shutdownService;
 	private List<UPSVariable>? _varList;
 
+	public int PollingIntervalSeconds => _config.PollingIntervalSeconds;
 
-	public UPSMonitor(NUTClient nutClient, IClientGUIService clientGUIService, IShutdownService shutdownService)
+	public UPSMonitor(NUTClient nutClient, MonitorConfig config, IClientGUIService clientGUIService, IShutdownService shutdownService)
 	{
 		_client = nutClient;
-		_client.Connect();
+		_config = config;
+		if (!_client.IsConnected)
+		{
+			_client.Connect();
+		}
 
 		var upsList = _client.GetUPSes(true);
 
@@ -52,11 +52,13 @@ public class UPSMonitor
 		await _clientGUIService.PushDeviceInfo(deviceInfo);
 	}
 
-
 	public async Task CheckUPSStatus()
 	{
 		var chargeVariable = _ups.GetVariable("battery.charge", true);
 		var charge = uint.Parse(chargeVariable.Value);
+
+		var runtimeVariable = _ups.GetVariable("battery.runtime", true);
+		var runtime = uint.Parse(runtimeVariable.Value);
 
 		var statusVariable = _ups.GetVariable("ups.status", true);
 		var status = statusVariable.Value;
@@ -67,17 +69,25 @@ public class UPSMonitor
 			Status = status
 		};
 
-		// TODO check thresholds and possibly invoke shutdown
-
-
 		await _clientGUIService.PushStatusUpdate(statusUpdate);
 
-	}
+		var statusFlags = StatusHelpers.GetStatusFlags(status);
 
-	void InitiateSystemShutdown()
-	{
-		// TODO the delay should be determined by how much time is left on the battery, etc.
-		_shutdownService.InitiateShutdown(600);
+		if(statusFlags.Contains("OL"))
+		{
+			// On mains power, no need to worry
+			return;
+		}
+
+		// Check the thresholds to see if we need to initiate a shutdown
+		if (charge < _config.ChargeThreshold || runtime < _config.RemainingThresholdSeconds)
+		{
+			uint shutdownDelay = _config.ShutdownDelaySeconds;
+
+			var notification = new ShutdownNotification() { Remaining = shutdownDelay };
+			_shutdownService.InitiateShutdown(shutdownDelay);
+			await _clientGUIService.PushShutdownNotification(notification);
+		}
 	}
 
 	public void Shutdown()

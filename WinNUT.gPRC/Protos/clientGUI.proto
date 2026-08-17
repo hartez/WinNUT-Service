@@ -25,7 +25,7 @@ message Notification {
 }
 
 message ShutdownNotification {
-	uint64 remaining = 1;
+	uint32 remaining = 1;
 } 
 
 // This needs a route for passing device info that doesn't change

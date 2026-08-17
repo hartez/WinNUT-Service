@@ -22,6 +22,11 @@ namespace WinNUT.gPRC
 			{ "FSD", "Forced Shutdown"}
 		};
 
+		public static string[] GetStatusFlags(string upsStatus)
+		{
+			return upsStatus.Split(" ");
+		}
+
 		public static string TranslateStatus(string upsStatus, string delimiter = "; ")
 		{
 			var flags = upsStatus.Split(" ");

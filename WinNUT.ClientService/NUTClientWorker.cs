@@ -1,18 +1,14 @@
-using NUTDotNetClient;
-using WinNUT.gPRC.Services;
+using System.Runtime.CompilerServices;
 
 namespace WinNUT.ClientService;
 
-public class NUTClientWorker(NUTClientConfig config, ILogger<NUTClientWorker> logger, 
+public class NUTClientWorker(ILogger<NUTClientWorker> logger, 
     UPSMonitor upsMonitor) : BackgroundService
 {
-	private readonly NUTClientConfig _config = config;
 	private readonly UPSMonitor _upsMonitor = upsMonitor;
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-		var interval = _config.PollingInterval;
-        
         await _upsMonitor.GetDeviceInfo();
 
         while (!stoppingToken.IsCancellationRequested)
@@ -24,11 +20,17 @@ public class NUTClientWorker(NUTClientConfig config, ILogger<NUTClientWorker> lo
 
 			await _upsMonitor.CheckUPSStatus();
 
-			await Task.Delay(interval, stoppingToken);
+			await Task.Delay(_upsMonitor.PollingIntervalSeconds * 1000, stoppingToken);
         }
 
 		_upsMonitor.Shutdown();
     }
 }
 
-public record NUTClientConfig(string Host, int Port = 3493, int PollingInterval = 5000); // add serial number
+public record NUTClientConfig(string Host = "localhost", int Port = 3493);
+
+public record MonitorConfig(string UPSSerialNumber = "", int PollingIntervalSeconds = 5, 
+    uint ChargeThreshold = 50, uint RemainingThresholdSeconds = 300, uint ShutdownDelaySeconds = 180) 
+{
+	public uint ChargeThreshold {get; init; } = ChargeThreshold <= 100 ? ChargeThreshold : throw new ArgumentException($"{nameof(ChargeThreshold)} must be 100 or less");
+}
