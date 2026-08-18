@@ -55,6 +55,12 @@ namespace WinNUT.gPRC
 
 		public static string ToDisplay(this StatusNotification notification)
 		{
+			if(GetStatusFlags(notification.Status).Contains("OB"))
+			{ 
+				var remaining = (int)(notification.BatterySecondsRemaining/60);
+				return $"Battery: {notification.Charge}%, Remaining: {remaining} min, Status: {TranslateStatus(notification.Status)}";
+			}
+
 			return $"Battery: {notification.Charge}%, Status: {TranslateStatus(notification.Status)}";
 		}
 	}

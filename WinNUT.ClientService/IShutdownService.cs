@@ -1,7 +1,9 @@
 namespace WinNUT.ClientService;
 
-public interface IShutdownService 
+public interface IShutdownService
 {
-	public void InitiateShutdown(uint delaySeconds);
-	public void CancelShutdown();
+	public Task InitiateShutdown(uint delaySeconds);
+	public Task CancelShutdown();
+	public bool ShutdownInitiated { get; }
+	public int SecondsUntilShutdown { get; }
 }

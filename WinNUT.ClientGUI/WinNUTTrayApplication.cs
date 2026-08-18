@@ -7,10 +7,13 @@ namespace WinNUT.ClientGUI
 {
 	public class WinNUTTrayApplication : ApplicationContext
 	{
+		private bool _disposed;
 		private readonly NotifyIcon _trayIcon;
 		CancellationTokenSource _cancellationTokenSource = new();
 		StatusNotification? _latestStatus;
 		DeviceInfo? _deviceInfo;
+
+		gPRC.ClientGUI.ClientGUIClient? _client;
 
 		public WinNUTTrayApplication()
 		{
@@ -34,8 +37,8 @@ namespace WinNUT.ClientGUI
 			var token = _cancellationTokenSource.Token;
 
 			using var channel = CreateChannel();
-			var client = new gPRC.ClientGUI.ClientGUIClient(channel);
-			var stream = client.Subscribe(new SubscribeRequest { Subscriber = "WinNUT.ClientGUI Tray Application" });
+			_client = new gPRC.ClientGUI.ClientGUIClient(channel);
+			var stream = _client.Subscribe(new SubscribeRequest { Subscriber = "WinNUT.ClientGUI Tray Application" });
 
 			await foreach (var notification in stream.ResponseStream.ReadAllAsync(token))
 			{
@@ -44,8 +47,8 @@ namespace WinNUT.ClientGUI
 				{
 					case Notification.NotificationTypeOneofCase.None:
 						break;
-					case Notification.NotificationTypeOneofCase.ShutDown:
-						ShowShutdownNotification();
+					case Notification.NotificationTypeOneofCase.ShutdownInitiated:
+						await ShowShutdownNotification(notification.ShutdownInitiated);
 						break;
 					case Notification.NotificationTypeOneofCase.Status:
 						_latestStatus = notification.Status;
@@ -83,15 +86,45 @@ namespace WinNUT.ClientGUI
 			Application.Exit();
 		}
 
-		private async void ShowShutdownNotification()
+		protected override void Dispose(bool disposing)
 		{
-			// TODO convert this to a notification about shutdown with an option to delay it
-			MessageBox.Show("Message about shutdown", "Shutdown Initiated");
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+
+			if (disposing)
+			{
+				_cancellationTokenSource.Cancel();
+				_trayIcon.Visible = false;
+			}
+
+			base.Dispose(disposing);
 		}
 
-		private async void ShowUPSStatus()
+		private async Task ShowShutdownNotification(ShutdownInitiatedNotification notification)
 		{
-			MessageBox.Show("Some status info, eventually?", "UPS Status");
+			if (notification.AllowDelayRequest)
+			{
+				var result = MessageBox.Show("Shutdown has started. Wanna delay it?", "Shutdown Initiated",
+					MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2,
+					MessageBoxOptions.ServiceNotification);
+
+				if (result == DialogResult.Yes && _client != null)
+				{
+					await _client.RequestShutdownDelayAsync(new DelayRequest());
+				}
+
+				// TODO while there's a pending shutdown, show "request delay" in menu
+			}
+			else
+			{
+				MessageBox.Show("Shutdown has started.", "Shutdown Initiated",
+					MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1,
+					MessageBoxOptions.ServiceNotification);
+			}
 		}
 
 		private void ShowDeviceInfo()
@@ -101,6 +134,7 @@ namespace WinNUT.ClientGUI
 			if (_latestStatus != null)
 			{
 				sb.Append($"Battery: {_latestStatus.Charge}%\n");
+				sb.Append($"Battery Time Remaining: {(int)(_latestStatus.BatterySecondsRemaining / 60)} minutes\n");
 				sb.Append($"UPS Status: {StatusHelpers.TranslateStatus(_latestStatus.Status, "\n")}\n");
 			}
 

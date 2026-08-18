@@ -32,6 +32,26 @@ public class UPSMonitor
 		_ups = upsList.First();
 		_clientGUIService = clientGUIService;
 		_shutdownService = shutdownService;
+
+		_clientGUIService.HandleShutdownDelayRequest = ShutdownDelayRequested;
+	}
+
+	private async Task<ShutdownNotification> ShutdownDelayRequested()
+	{
+		if(!_shutdownService.ShutdownInitiated)
+		{
+			return new ShutdownNotification{ ShutDownCanceled = new ShutdownCanceledNotification() };
+		}
+
+		var timeremaining = _shutdownService.SecondsUntilShutdown;
+		var shutdownDelay = (uint)(TimeSpan.FromMinutes(3).Seconds + timeremaining);
+
+		await _shutdownService.CancelShutdown();
+		
+		var notification = new ShutdownInitiatedNotification() { Remaining = shutdownDelay, AllowDelayRequest = false };
+		await _shutdownService.InitiateShutdown(shutdownDelay);
+
+		return new ShutdownNotification{ ShutdownInitiated = notification };
 	}
 
 	public async Task GetDeviceInfo()
@@ -66,7 +86,8 @@ public class UPSMonitor
 		var statusUpdate = new StatusNotification
 		{
 			Charge = charge,
-			Status = status
+			Status = status,
+			BatterySecondsRemaining = runtime
 		};
 
 		await _clientGUIService.PushStatusUpdate(statusUpdate);
@@ -75,6 +96,12 @@ public class UPSMonitor
 
 		if(statusFlags.Contains("OL"))
 		{
+			if(_shutdownService.ShutdownInitiated)
+			{
+				// We're back online, we can cancel the pending shutdown
+				await _shutdownService.CancelShutdown();
+			}
+
 			// On mains power, no need to worry
 			return;
 		}
@@ -84,14 +111,15 @@ public class UPSMonitor
 		{
 			uint shutdownDelay = _config.ShutdownDelaySeconds;
 
-			var notification = new ShutdownNotification() { Remaining = shutdownDelay };
-			_shutdownService.InitiateShutdown(shutdownDelay);
+			var notification = new ShutdownInitiatedNotification() { Remaining = shutdownDelay, AllowDelayRequest = true };
+			await _shutdownService.InitiateShutdown(shutdownDelay);
 			await _clientGUIService.PushShutdownNotification(notification);
 		}
 	}
 
 	public void Shutdown()
 	{
+		_clientGUIService.HandleShutdownDelayRequest = null;
 		_clientGUIService.Shutdown();
 	}
 }

@@ -2,18 +2,15 @@ using Grpc.Core;
 
 namespace WinNUT.gPRC.Services
 {
-	public class ClientGUIService : ClientGUI.ClientGUIBase, IClientGUIService
+	public class ClientGUIService(ILogger<ClientGUIService> logger) : ClientGUI.ClientGUIBase, IClientGUIService
 	{
 		private IServerStreamWriter<Notification>? _responseStream;
 		private readonly CancellationTokenSource _cancellationTokenSource = new();
-		private readonly ILogger<ClientGUIService> _logger;
+		private readonly ILogger<ClientGUIService> _logger = logger;
 		private StatusNotification? _lastStatusUpdate;
 		private DeviceInfo? _deviceInfo;
 
-		public ClientGUIService(ILogger<ClientGUIService> logger)
-		{
-			_logger = logger;
-		}
+		public Func<Task<ShutdownNotification>>? HandleShutdownDelayRequest { get; set; }
 
 		public override async Task Subscribe(SubscribeRequest request, IServerStreamWriter<Notification> responseStream, ServerCallContext context)
 		{
@@ -35,25 +32,40 @@ namespace WinNUT.gPRC.Services
 
 			while (!context.CancellationToken.IsCancellationRequested && !_cancellationTokenSource.IsCancellationRequested)
 			{
-				await Task.Delay(100, _cancellationTokenSource.Token);
+				await Task.Delay(1000, _cancellationTokenSource.Token);
 			}
 
 			return;
 		}
 
-		public override Task<ShutdownNotification> RequestShutdownDelay(DelayRequest request, ServerCallContext context)
+		public override async Task<ShutdownNotification> RequestShutdownDelay(DelayRequest request, ServerCallContext context)
 		{
-			return base.RequestShutdownDelay(request, context);
-		}
-
-		public async Task PushShutdownNotification(ShutdownNotification notification)
-		{
-			if (_responseStream == null) 
-			{ 
-				return; 
+			if (HandleShutdownDelayRequest != null)
+			{
+				return await HandleShutdownDelayRequest.Invoke();
 			}
 
-			await _responseStream.WriteAsync(new Notification() { ShutDown = notification });
+			return new ShutdownNotification{ ShutDownCanceled = new ShutdownCanceledNotification() };
+		}
+
+		public async Task PushShutdownNotification(ShutdownInitiatedNotification notification)
+		{
+			if (_responseStream == null)
+			{
+				return;
+			}
+
+			await _responseStream.WriteAsync(new Notification() { ShutdownInitiated = notification });
+		}
+
+		public async Task PushShutdownCanceledNotification(ShutdownCanceledNotification notification)
+		{
+			if (_responseStream == null)
+			{
+				return;
+			}
+
+			await _responseStream.WriteAsync(new Notification() { ShutDownCanceled = notification });
 		}
 
 		public async Task PushStatusUpdate(StatusNotification notification)

@@ -95,12 +95,12 @@ namespace WinNUT_ClientService.Tests
 
 			if (shouldTrigger)
 			{
-				await ClientGuiService.Received().PushShutdownNotification(Arg.Is<ShutdownNotification>(n => n.Remaining == shutdownDelay));
+				await ClientGuiService.Received().PushShutdownNotification(Arg.Is<ShutdownInitiatedNotification>(n => n.Remaining == shutdownDelay));
 				ShutdownService.Received().InitiateShutdown(Arg.Is<uint>(500));
 			}
 			else
 			{
-				await ClientGuiService.DidNotReceive().PushShutdownNotification(Arg.Any<ShutdownNotification>());
+				await ClientGuiService.DidNotReceive().PushShutdownNotification(Arg.Any<ShutdownInitiatedNotification>());
 				ShutdownService.DidNotReceive().InitiateShutdown(Arg.Any<uint>());
 			}
 		}

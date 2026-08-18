@@ -6,7 +6,7 @@ package clientGUI;
 
 service ClientGUI {
 	rpc Subscribe (SubscribeRequest) returns (stream Notification);
-	rpc RequestShutdownDelay (DelayRequest) returns (ShutdownNotification);
+	rpc RequestShutdownDelay (DelayRequest) returns (ShutdownNotification); 
 }
 
 message SubscribeRequest {
@@ -18,23 +18,32 @@ message DelayRequest {
 
 message Notification {
 	oneof NotificationType {
-		ShutdownNotification shutDown = 1;
+		ShutdownInitiatedNotification shutdownInitiated = 1;
 		StatusNotification status = 2;
 		DeviceInfo deviceInfo = 3;
+		ShutdownCanceledNotification shutDownCanceled = 4;
 	}
 }
 
-message ShutdownNotification {
+message ShutdownInitiatedNotification {
 	uint32 remaining = 1;
+	bool allowDelayRequest = 2; 
 } 
 
-// This needs a route for passing device info that doesn't change
-// Probably a map<string, string>
-// Throw in every variable that starts with device.
+message ShutdownCanceledNotification {
+}
+
+message ShutdownNotification {
+	oneof NotificationType {
+		ShutdownInitiatedNotification shutdownInitiated = 1;
+		ShutdownCanceledNotification shutDownCanceled = 4;
+	}
+}
 
 message StatusNotification {
 	uint32 charge = 1;
-	string status = 3;
+	string status = 2;
+	uint32 batterySecondsRemaining = 3;
 }
 
 message DeviceInfo {

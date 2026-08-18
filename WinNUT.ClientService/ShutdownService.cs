@@ -2,16 +2,18 @@ using System.Diagnostics;
 
 namespace WinNUT.ClientService;
 
-public class ShutdownService : IShutdownService
+public class ShutdownService(ILogger<ShutdownService> logger) : IShutdownService
 {
-	private readonly ILogger<ShutdownService> _logger;
+	private readonly ILogger<ShutdownService> _logger = logger;
 
-	public ShutdownService(ILogger<ShutdownService> logger)
-	{
-		_logger = logger;
-	}
+	public bool ShutdownInitiated => _targetShutdownTime != null;
+	public int SecondsUntilShutdown => _targetShutdownTime == null 
+		? int.MaxValue 
+		: (int)_targetShutdownTime.Value.Subtract(DateTime.Now).TotalSeconds;
 
-	public void CancelShutdown()
+	private DateTime? _targetShutdownTime;
+
+	public async Task CancelShutdown()
 	{
 		var startInfo = new ProcessStartInfo
 		{
@@ -24,7 +26,14 @@ public class ShutdownService : IShutdownService
 		try
 		{
 			_logger.LogInformation($"Aborting shutdown with arguments {startInfo.ArgumentList}");
-			Process.Start(startInfo);
+			
+			var process = Process.Start(startInfo);
+
+			if(process != null){
+				await process.WaitForExitAsync();
+			}
+
+			_targetShutdownTime = null;
 		}
 		catch (Exception ex)
 		{
@@ -32,7 +41,7 @@ public class ShutdownService : IShutdownService
 		}
 	}
 
-	public void InitiateShutdown(uint delaySeconds)
+	public async Task InitiateShutdown(uint delaySeconds)
 	{
 		var startInfo = new ProcessStartInfo
 		{
@@ -45,7 +54,13 @@ public class ShutdownService : IShutdownService
 		try
 		{
 			_logger.LogInformation($"Initiating shutdown with arguments {startInfo.ArgumentList}");
-			Process.Start(startInfo);
+			_targetShutdownTime = DateTime.Now.AddSeconds(delaySeconds);
+			
+			var process = Process.Start(startInfo);
+
+			if(process != null){
+				await process.WaitForExitAsync();
+			}
 		}
 		catch (Exception ex)
 		{
