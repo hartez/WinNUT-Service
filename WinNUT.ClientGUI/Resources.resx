@@ -118,7 +118,37 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="battery" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>battery.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="battery_0_ob" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_0_ob.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_0_ol" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_0_ol.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_25_ob" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_25_ob.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_25_ol" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_25_ol.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_50_ob" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_50_ob.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_50_ol" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_50_ol.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_75_ob" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_75_ob.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_75_ol" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_75_ol.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_100_ob" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_100_ob.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_100_ol" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_100_ol.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="battery_unknown" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\battery_unknown.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

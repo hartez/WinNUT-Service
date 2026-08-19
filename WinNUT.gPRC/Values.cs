@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ViewComponents;
-
-namespace WinNUT.gPRC
+﻿namespace WinNUT.gPRC
 {
 	public static class Values
 	{

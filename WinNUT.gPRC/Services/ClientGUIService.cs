@@ -7,14 +7,18 @@ namespace WinNUT.gPRC.Services
 		private IServerStreamWriter<Notification>? _responseStream;
 		private readonly CancellationTokenSource _cancellationTokenSource = new();
 		private readonly ILogger<ClientGUIService> _logger = logger;
-		private StatusNotification? _lastStatusUpdate;
+		private DeviceStatus? _lastStatusUpdate;
+		private Error? _lastError;
 		private DeviceInfo? _deviceInfo;
 
 		public Func<Task<ShutdownNotification>>? HandleShutdownDelayRequest { get; set; }
 
 		public override async Task Subscribe(SubscribeRequest request, IServerStreamWriter<Notification> responseStream, ServerCallContext context)
 		{
-			_logger.LogInformation($"Received subscription request from {request.Subscriber}");
+			if (_logger.IsEnabled(LogLevel.Information))
+			{
+				_logger.LogInformation("Received subscription request from {subscriber}", request.Subscriber);
+			}
 
 			_responseStream = responseStream;
 
@@ -24,16 +28,22 @@ namespace WinNUT.gPRC.Services
 				await PushDeviceInfo(_deviceInfo);
 			}
 
-			// Go ahead and push our latest update to the newly connected client
+			// Go ahead and push our latest update (or error) to the newly connected client
 			if (_lastStatusUpdate != null)
 			{
 				await PushStatusUpdate(_lastStatusUpdate);
+			}
+			else if (_lastError != null)
+			{
+				await PushError(_lastError);
 			}
 
 			while (!context.CancellationToken.IsCancellationRequested && !_cancellationTokenSource.IsCancellationRequested)
 			{
 				await Task.Delay(1000, _cancellationTokenSource.Token);
 			}
+
+			_responseStream = null;
 
 			return;
 		}
@@ -45,10 +55,10 @@ namespace WinNUT.gPRC.Services
 				return await HandleShutdownDelayRequest.Invoke();
 			}
 
-			return new ShutdownNotification{ ShutDownCanceled = new ShutdownCanceledNotification() };
+			return new ShutdownNotification { ShutDownCanceled = new ShutdownCanceled() };
 		}
 
-		public async Task PushShutdownNotification(ShutdownInitiatedNotification notification)
+		public async Task PushShutdownNotification(ShutdownInitiated notification)
 		{
 			if (_responseStream == null)
 			{
@@ -58,7 +68,7 @@ namespace WinNUT.gPRC.Services
 			await _responseStream.WriteAsync(new Notification() { ShutdownInitiated = notification });
 		}
 
-		public async Task PushShutdownCanceledNotification(ShutdownCanceledNotification notification)
+		public async Task PushShutdownCanceledNotification(ShutdownCanceled notification)
 		{
 			if (_responseStream == null)
 			{
@@ -68,16 +78,17 @@ namespace WinNUT.gPRC.Services
 			await _responseStream.WriteAsync(new Notification() { ShutDownCanceled = notification });
 		}
 
-		public async Task PushStatusUpdate(StatusNotification notification)
+		public async Task PushStatusUpdate(DeviceStatus status)
 		{
-			_lastStatusUpdate = notification;
+			_lastStatusUpdate = status;
+			_lastError = null;
 
 			if (_responseStream == null)
 			{
 				return;
 			}
 
-			await _responseStream.WriteAsync(new Notification() { Status = notification });
+			await _responseStream.WriteAsync(new Notification() { DeviceStatus = status });
 		}
 
 		public async Task PushDeviceInfo(DeviceInfo deviceInfo)
@@ -92,9 +103,22 @@ namespace WinNUT.gPRC.Services
 			await _responseStream.WriteAsync(new Notification() { DeviceInfo = deviceInfo });
 		}
 
-		public void Shutdown()
+		public void Cleanup()
 		{
 			_cancellationTokenSource.Cancel();
+		}
+
+		public async Task PushError(Error error)
+		{
+			_lastError = error;
+			_lastStatusUpdate = null;
+
+			if (_responseStream == null)
+			{
+				return;
+			}
+
+			await _responseStream.WriteAsync(new Notification() { Error = error });
 		}
 	}
 }

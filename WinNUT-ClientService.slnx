@@ -6,4 +6,6 @@
   <Project Path="WinNUT.ClientService.Tests/WinNUT.ClientService.Tests.csproj" />
   <Project Path="WinNUT.ClientService/WinNUT.ClientService.csproj" />
   <Project Path="WinNUT.gPRC/WinNUT.gPRC.csproj" />
+  <Project Path="WinNUT.TestServer/WinNUT.Simulator.csproj" Id="5a6f2cb6-b8b1-400b-ad69-f11f6c6dd781" />
+  <Project Path="WinNUT.TestServerGUI/WinNUT.SimulatorGUI.csproj" Id="3c0f9e0b-e00a-4a0f-aecc-06b69f3b1d1e" />
 </Solution>

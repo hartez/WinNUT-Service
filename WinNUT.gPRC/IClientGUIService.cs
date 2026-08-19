@@ -6,10 +6,11 @@ namespace WinNUT.gPRC
 	{
 		Func<Task<ShutdownNotification>>? HandleShutdownDelayRequest { get; set; }
 
-		void Shutdown();
-		Task PushShutdownNotification(ShutdownInitiatedNotification notification);
-		Task PushStatusUpdate(StatusNotification notification);
+		void Cleanup();
+		Task PushShutdownNotification(ShutdownInitiated notification);
+		Task PushStatusUpdate(DeviceStatus status);
 		Task PushDeviceInfo(DeviceInfo deviceInfo);
-		Task PushShutdownCanceledNotification(ShutdownCanceledNotification notification);
+		Task PushShutdownCanceledNotification(ShutdownCanceled notification);
+		Task PushError(Error error);
 	}
 }

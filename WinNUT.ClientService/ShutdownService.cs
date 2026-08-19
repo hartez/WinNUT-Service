@@ -4,11 +4,11 @@ namespace WinNUT.ClientService;
 
 public class ShutdownService(ILogger<ShutdownService> logger) : IShutdownService
 {
-	private readonly ILogger<ShutdownService> _logger = logger;
+	readonly ILogger<ShutdownService> _logger = logger;
 
 	public bool ShutdownInitiated => _targetShutdownTime != null;
-	public int SecondsUntilShutdown => _targetShutdownTime == null 
-		? int.MaxValue 
+	public int SecondsUntilShutdown => _targetShutdownTime == null
+		? int.MaxValue
 		: (int)_targetShutdownTime.Value.Subtract(DateTime.Now).TotalSeconds;
 
 	private DateTime? _targetShutdownTime;
@@ -18,18 +18,22 @@ public class ShutdownService(ILogger<ShutdownService> logger) : IShutdownService
 		var startInfo = new ProcessStartInfo
 		{
 			FileName = "cmd.exe",
-			Arguments = $"/K shutdown /a",
+			Arguments = $"/c shutdown /a",
 			CreateNoWindow = true,
 			UseShellExecute = false
 		};
 
 		try
 		{
-			_logger.LogInformation($"Aborting shutdown with arguments {startInfo.ArgumentList}");
-			
+			if (_logger.IsEnabled(LogLevel.Information))
+			{
+				_logger.LogInformation("Aborting shutdown with arguments {args}", startInfo.Arguments);
+			}
+
 			var process = Process.Start(startInfo);
 
-			if(process != null){
+			if (process != null)
+			{
 				await process.WaitForExitAsync();
 			}
 
@@ -41,24 +45,29 @@ public class ShutdownService(ILogger<ShutdownService> logger) : IShutdownService
 		}
 	}
 
-	public async Task InitiateShutdown(uint delaySeconds)
+	public async Task InitiateShutdown(int delaySeconds)
 	{
 		var startInfo = new ProcessStartInfo
 		{
 			FileName = "cmd.exe",
-			Arguments = $"/K shutdown /s /t {delaySeconds}",
+			Arguments = $"/c shutdown /s /t {delaySeconds}",
 			CreateNoWindow = true,
 			UseShellExecute = false
 		};
 
 		try
 		{
-			_logger.LogInformation($"Initiating shutdown with arguments {startInfo.ArgumentList}");
+			if (_logger.IsEnabled(LogLevel.Information))
+			{
+				_logger.LogInformation("Initiating shutdown with arguments {args}", startInfo.Arguments);
+			}
+
 			_targetShutdownTime = DateTime.Now.AddSeconds(delaySeconds);
-			
+
 			var process = Process.Start(startInfo);
 
-			if(process != null){
+			if (process != null)
+			{
 				await process.WaitForExitAsync();
 			}
 		}

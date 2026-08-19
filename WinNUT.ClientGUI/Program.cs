@@ -1,6 +1,3 @@
-using Grpc.Net.Client;
-using WinNUT.gPRC.Services;
-
 namespace WinNUT.ClientGUI
 {
 	internal static class Program
@@ -10,9 +7,9 @@ namespace WinNUT.ClientGUI
 		{
 			ApplicationConfiguration.Initialize();
 
-			var app = new WinNUTTrayApplication();
+			using var app = new WinNUTTrayApplication();
 
-			Task.Run(() => app.StartListening());
+			Task.Run(() => app.Listen());
 
 			Application.Run(app);
 		}

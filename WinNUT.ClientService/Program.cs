@@ -1,12 +1,12 @@
-using WinNUT.gPRC.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Logging.EventLog;
+using NUTDotNetClient;
 using WinNUT.ClientService;
 using WinNUT.gPRC;
-using NUTDotNetClient;
+using WinNUT.gPRC.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +37,8 @@ builder.Services.AddSingleton<IClientGUIService>(x => x.GetRequiredService<Clien
 
 builder.Services.AddSingleton<IShutdownService, ShutdownService>();
 
-builder.Services.AddSingleton((services) => {
+builder.Services.AddSingleton((services) =>
+{
 	var config = services.GetRequiredService<NUTClientConfig>();
 	return new NUTClient(config.Host, config.Port);
 });

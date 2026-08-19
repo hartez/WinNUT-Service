@@ -1,40 +1,34 @@
-﻿using NSubstitute;
+﻿using Microsoft.Extensions.Logging;
+using NSubstitute;
 using NUTDotNetClient;
-using NUTDotNetServer;
 using WinNUT.ClientService;
 using WinNUT.gPRC;
+using WinNUT.Simulator;
 
 namespace WinNUT_ClientService.Tests
 {
 	public class UPSMonitorTests
 	{
-		protected NUTServer TestServer { get; }
+		protected TestServer TestServer { get; }
 		protected NUTClient TestClient { get; }
 		protected IClientGUIService ClientGuiService { get; }
 		protected IShutdownService ShutdownService { get; }
+		protected ILogger<UPSMonitor> Logger { get; }
 
 		public UPSMonitorTests()
 		{
-			TestServer = new NUTServer(0);
-			TestServer.Start();
+			TestServer = new(0);
+			TestServer.StartAndWaitUntilListening();
 
-			// We have to wait until the server is accepting connections before we can do anything with it
-			while (!TestServer.IsListening)
-			{
-				Thread.Sleep(20);
-			}
-
-			var ups = new ServerUPS("TestUPS");
-			TestServer.UPSs.Add(ups);
-
-			SetTestServerCharge(100);
-			SetTestServerStatus("OL");
-			SetTestServerBatteryRemainingTime(4092);
+			TestServer.Charge = 100;
+			TestServer.Status = "OL";
+			TestServer.BatteryRemainingTime = 4092;
 
 			TestClient = new NUTClient("localhost", TestServer.ListenPort);
 
 			ClientGuiService = Substitute.For<IClientGUIService>();
 			ShutdownService = Substitute.For<IShutdownService>();
+			Logger = Substitute.For<ILogger<UPSMonitor>>();
 		}
 
 		[Fact]
@@ -46,100 +40,53 @@ namespace WinNUT_ClientService.Tests
 		[Fact]
 		public void CanConfigurePollingInterval()
 		{
-			var monitor = new UPSMonitor(TestClient, new MonitorConfig(PollingIntervalSeconds: 10), ClientGuiService, ShutdownService);
+			var monitor = new UPSMonitor(TestClient, new MonitorConfig(PollingIntervalSeconds: 10), ClientGuiService, ShutdownService, Logger);
 			Assert.Equal(10, monitor.PollingIntervalSeconds);
 		}
-
-		//[Fact]
-		//public void CanConfigureUPSSerialNumber()
-		//{
-		//	var monitor = new UPSMonitor(TestClient, new MonitorConfig(UPSSerialNumber: "8675309"), ClientGuiService, ShutdownService);
-		//	Assert.Equal(10, monitor.PollingIntervalSeconds);
-		//}
-
 
 		/* Notification Tests */
 
 		[Fact]
 		public async Task SendsStatusOnUPSCheck()
 		{
-			var monitor = new UPSMonitor(TestClient, new MonitorConfig(), ClientGuiService, ShutdownService);
+			var monitor = new UPSMonitor(TestClient, new MonitorConfig(), ClientGuiService, ShutdownService, Logger);
 
 			await monitor.CheckUPSStatus();
 
-			await ClientGuiService.Received().PushStatusUpdate(Arg.Any<StatusNotification>());
+			await ClientGuiService.Received().PushStatusUpdate(Arg.Any<DeviceStatus>());
 		}
 
 		[Theory]
-		
 		[InlineData(80, 100, 600, 1000, "OL", false)]
 		[InlineData(80, 75, 600, 1000, "OL", false)]
 		[InlineData(80, 100, 600, 500, "OL", false)]
 		[InlineData(80, 75, 600, 500, "OL", false)]
-
 		[InlineData(80, 100, 600, 1000, "OB", false)]
 		[InlineData(80, 75, 600, 1000, "OB", true)]
 		[InlineData(80, 100, 600, 500, "OB", true)]
 		[InlineData(80, 75, 600, 500, "OB", true)]
-		public async Task Shutdown(uint chargeThreshold, uint charge, uint remainingTimeThreshold, uint remainingTime, string status, bool shouldTrigger)
+		public async Task InitiatesShutdownWhenConditionsAreMet(int chargeThreshold, int charge, int remainingTimeThreshold, int remainingTime, string status, bool shutdownExpected)
 		{
-			uint shutdownDelay = 500;
+			int shutdownDelay = 500;
 			var config = new MonitorConfig(RemainingThresholdSeconds: remainingTimeThreshold, ChargeThreshold: chargeThreshold, ShutdownDelaySeconds: shutdownDelay);
-			var monitor = new UPSMonitor(TestClient, config, ClientGuiService, ShutdownService);
+			var monitor = new UPSMonitor(TestClient, config, ClientGuiService, ShutdownService, Logger);
 
-			SetTestServerCharge(charge);
-			SetTestServerBatteryRemainingTime(remainingTime);
-			SetTestServerStatus(status);
+			TestServer.Charge = charge;
+			TestServer.BatteryRemainingTime = remainingTime;
+			TestServer.Status = status;
 
 			await monitor.CheckUPSStatus();
 
-			if (shouldTrigger)
+			if (shutdownExpected)
 			{
-				await ClientGuiService.Received().PushShutdownNotification(Arg.Is<ShutdownInitiatedNotification>(n => n.Remaining == shutdownDelay));
-				ShutdownService.Received().InitiateShutdown(Arg.Is<uint>(500));
+				await ClientGuiService.Received().PushShutdownNotification(Arg.Is<ShutdownInitiated>(n => n.Remaining == shutdownDelay));
+				await ShutdownService.Received().InitiateShutdown(Arg.Is<int>(shutdownDelay));
 			}
 			else
 			{
-				await ClientGuiService.DidNotReceive().PushShutdownNotification(Arg.Any<ShutdownInitiatedNotification>());
-				ShutdownService.DidNotReceive().InitiateShutdown(Arg.Any<uint>());
+				await ClientGuiService.DidNotReceive().PushShutdownNotification(Arg.Any<ShutdownInitiated>());
+				await ShutdownService.DidNotReceive().InitiateShutdown(Arg.Any<int>());
 			}
-		}
-
-		/* Test Helpers */
-
-		void SetTestServerVariable(string ups, string name, string value, NUTDotNetShared.VarFlags flags)
-		{
-			var device = TestServer.GetUPSByName(ups);
-
-			if (device.Variables.Any(v => v.Name == name))
-			{
-				var variable = device.GetVariableByName(name);
-				if (variable != null)
-				{
-					TestServer.GetUPSByName(ups).Variables.Remove(variable);
-				}
-			}
-
-			device.Variables.Add(
-				new NUTDotNetShared.UPSVariable(name, flags)
-				{
-					Value = value
-				});
-		}
-
-		void SetTestServerCharge(uint charge, string ups = "TestUPS")
-		{
-			SetTestServerVariable(ups, "battery.charge", charge.ToString(), NUTDotNetShared.VarFlags.Number);
-		}
-
-		void SetTestServerStatus(string status, string ups = "TestUPS")
-		{
-			SetTestServerVariable(ups, "ups.status", status, NUTDotNetShared.VarFlags.String);
-		}
-
-		void SetTestServerBatteryRemainingTime(uint remaining, string ups = "TestUPS")
-		{
-			SetTestServerVariable(ups, "battery.runtime", remaining.ToString(), NUTDotNetShared.VarFlags.Number);
 		}
 	}
 }

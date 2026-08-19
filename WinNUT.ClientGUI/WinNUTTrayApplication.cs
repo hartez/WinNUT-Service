@@ -7,23 +7,36 @@ namespace WinNUT.ClientGUI
 {
 	public class WinNUTTrayApplication : ApplicationContext
 	{
-		private bool _disposed;
-		private readonly NotifyIcon _trayIcon;
-		CancellationTokenSource _cancellationTokenSource = new();
-		StatusNotification? _latestStatus;
+		bool _disposed;
+
+		readonly NotifyIcon _trayIcon;
+		readonly ToolStripItem _requestDelay;
+
+		readonly CancellationTokenSource _cancellationTokenSource = new();
+
 		DeviceInfo? _deviceInfo;
+		DeviceStatus? _latestStatus;
+		Error? _latestError;
+
+		bool _mayRequestDelay = false;
 
 		gPRC.ClientGUI.ClientGUIClient? _client;
+
+		readonly SynchronizationContext _synchronizationContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
 
 		public WinNUTTrayApplication()
 		{
 			var menu = new ContextMenuStrip();
 			menu.Items.Add("UPS Info", null, (_, _) => ShowDeviceInfo());
+
+			_requestDelay = menu.Items.Add("Request Delay", null, async (_, _) => await RequestDelay());
+			_requestDelay.Visible = _mayRequestDelay;
+
 			menu.Items.Add("Exit", null, (_, _) => ExitApplication());
 
 			_trayIcon = new NotifyIcon
 			{
-				Icon = Resources.battery, // TODO Update icons based on UPS status/charge
+				Icon = Resources.battery_unknown,
 				Text = "UPS Status Unknown",
 				ContextMenuStrip = menu,
 				Visible = true
@@ -32,17 +45,16 @@ namespace WinNUT.ClientGUI
 			_trayIcon.DoubleClick += (_, _) => ShowDeviceInfo();
 		}
 
-		public async Task StartListening()
+		public async Task Listen()
 		{
 			var token = _cancellationTokenSource.Token;
 
 			using var channel = CreateChannel();
 			_client = new gPRC.ClientGUI.ClientGUIClient(channel);
-			var stream = _client.Subscribe(new SubscribeRequest { Subscriber = "WinNUT.ClientGUI Tray Application" });
-
+			using var stream = _client.Subscribe(new SubscribeRequest { Subscriber = "WinNUT.ClientGUI Tray Application" });
+			
 			await foreach (var notification in stream.ResponseStream.ReadAllAsync(token))
 			{
-
 				switch (notification.NotificationTypeCase)
 				{
 					case Notification.NotificationTypeOneofCase.None:
@@ -50,36 +62,125 @@ namespace WinNUT.ClientGUI
 					case Notification.NotificationTypeOneofCase.ShutdownInitiated:
 						await ShowShutdownNotification(notification.ShutdownInitiated);
 						break;
-					case Notification.NotificationTypeOneofCase.Status:
-						_latestStatus = notification.Status;
-						UpdateIcon(_latestStatus);
+					case Notification.NotificationTypeOneofCase.DeviceStatus:
+						UpdateStatus(notification.DeviceStatus);
 						break;
 					case Notification.NotificationTypeOneofCase.DeviceInfo:
 						UpdateDeviceInfo(notification.DeviceInfo);
 						break;
+					case Notification.NotificationTypeOneofCase.ShutDownCanceled:
+						UpdateDelayable(false);
+						break;
+					case Notification.NotificationTypeOneofCase.Error:
+						UpdateError(notification.Error);
+						break;
 				}
 			}
+
+			return;
 		}
 
-		private void UpdateDeviceInfo(DeviceInfo deviceInfo)
+		void UpdateUI()
+		{
+			_synchronizationContext.Post(_ =>
+			{
+				UpdateIcon();
+				UpdateToolTip();
+				UpdateMenu();
+			}, null);
+		}
+
+		void UpdateDeviceInfo(DeviceInfo deviceInfo)
 		{
 			_deviceInfo = deviceInfo;
 		}
 
-		private void UpdateIcon(StatusNotification statusNotification)
+		void UpdateDelayable(bool mayRequestDelay)
 		{
-			if (statusNotification == null)
+			_mayRequestDelay = mayRequestDelay;
+
+			UpdateUI();
+		}
+
+		void UpdateError(Error error)
+		{
+			_latestStatus = null;
+			_latestError = error;
+
+			_mayRequestDelay = false;
+
+			UpdateUI();
+		}
+
+		void UpdateStatus(DeviceStatus status)
+		{
+			_latestStatus = status;
+			_latestError = null;
+
+			_mayRequestDelay = !status.IsOnline();
+
+			UpdateUI();
+		}
+
+		void UpdateMenu()
+		{
+			_requestDelay.Visible = _mayRequestDelay;
+		}
+
+		void UpdateToolTip()
+		{
+			if (_latestStatus == null)
 			{
-				_trayIcon.Text = "UPS Status Unknown";
-				_trayIcon.Icon = Resources.battery;
+				if (_latestError == null)
+				{
+					_trayIcon.Text = "UPS Status Unknown";
+				}
+				else
+				{
+					_trayIcon.Text = "An error occurred connecting to the UPS. Double click for details.";
+				}
+
 				return;
 			}
 
-			_trayIcon.Icon = Resources.battery;
-			_trayIcon.Text = statusNotification.ToDisplay();
+			_trayIcon.Text = _latestStatus.ToDisplay();
 		}
 
-		private void ExitApplication()
+		void UpdateIcon()
+		{
+			if (_latestStatus == null)
+			{
+				_trayIcon.Icon = Resources.battery_unknown;
+				return;
+			}
+
+			var charge = _latestStatus.Charge;
+
+			if (_latestStatus.IsOnBattery())
+			{
+				_trayIcon.Icon = charge switch
+				{
+					>= 95 => Resources.battery_100_ob,
+					>= 75 => Resources.battery_75_ob,
+					>= 50 => Resources.battery_50_ob,
+					>= 25 => Resources.battery_25_ob,
+					_ => Resources.battery_0_ob
+				};
+			}
+			else
+			{
+				_trayIcon.Icon = charge switch
+				{
+					>= 95 => Resources.battery_100_ol,
+					>= 75 => Resources.battery_75_ol,
+					>= 50 => Resources.battery_50_ol,
+					>= 25 => Resources.battery_25_ol,
+					_ => Resources.battery_0_ol
+				};
+			}
+		}
+
+		void ExitApplication()
 		{
 			_cancellationTokenSource.Cancel();
 			_trayIcon.Visible = false;
@@ -104,30 +205,44 @@ namespace WinNUT.ClientGUI
 			base.Dispose(disposing);
 		}
 
-		private async Task ShowShutdownNotification(ShutdownInitiatedNotification notification)
+		async Task RequestDelay()
+		{
+			if (_client == null) { return; }
+
+			var updatedShutdownInfo = await _client.RequestShutdownDelayAsync(new DelayRequest());
+
+			if (!updatedShutdownInfo.ShutdownInitiated.AllowDelayRequest)
+			{
+				UpdateDelayable(false);
+			}
+		}
+
+		async Task ShowShutdownNotification(ShutdownInitiated notification)
 		{
 			if (notification.AllowDelayRequest)
 			{
-				var result = MessageBox.Show("Shutdown has started. Wanna delay it?", "Shutdown Initiated",
+				var result = MessageBox.Show("Currently on battery power; system shutdown has started. Would you like to delay it?", "Shutdown Initiated",
 					MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2,
 					MessageBoxOptions.ServiceNotification);
 
 				if (result == DialogResult.Yes && _client != null)
 				{
-					await _client.RequestShutdownDelayAsync(new DelayRequest());
+					await RequestDelay();
 				}
-
-				// TODO while there's a pending shutdown, show "request delay" in menu
+				else
+				{
+					UpdateDelayable(true);
+				}
 			}
 			else
 			{
-				MessageBox.Show("Shutdown has started.", "Shutdown Initiated",
+				MessageBox.Show("Currently on battery power; system shutdown has started.", "Shutdown Initiated",
 					MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1,
 					MessageBoxOptions.ServiceNotification);
 			}
 		}
 
-		private void ShowDeviceInfo()
+		void ShowDeviceInfo()
 		{
 			StringBuilder sb = new();
 
@@ -135,11 +250,16 @@ namespace WinNUT.ClientGUI
 			{
 				sb.Append($"Battery: {_latestStatus.Charge}%\n");
 				sb.Append($"Battery Time Remaining: {(int)(_latestStatus.BatterySecondsRemaining / 60)} minutes\n");
-				sb.Append($"UPS Status: {StatusHelpers.TranslateStatus(_latestStatus.Status, "\n")}\n");
+				sb.Append($"UPS Status: {StatusHelpers.TranslateStatus(_latestStatus.Flags, "\n")}\n");
+			}
+			else if (_latestError != null)
+			{
+				sb.Append($"Error: {_latestError.Description}\n");
 			}
 
 			if (_deviceInfo != null)
 			{
+				sb.Append("Device Information:\n");
 				foreach (var attr in _deviceInfo.DeviceAttributes)
 				{
 					sb.Append($"{attr.Key}: {attr.Value}\n");

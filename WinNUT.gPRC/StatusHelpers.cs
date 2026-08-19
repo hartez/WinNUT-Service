@@ -22,9 +22,9 @@ namespace WinNUT.gPRC
 			{ "FSD", "Forced Shutdown"}
 		};
 
-		public static string[] GetStatusFlags(string upsStatus)
+		public static string[] GetStatusFlags(string statusFlags)
 		{
-			return upsStatus.Split(" ");
+			return statusFlags.Split(" ");
 		}
 
 		public static string TranslateStatus(string upsStatus, string delimiter = "; ")
@@ -53,15 +53,25 @@ namespace WinNUT.gPRC
 			return sb.ToString();
 		}
 
-		public static string ToDisplay(this StatusNotification notification)
+		public static string ToDisplay(this DeviceStatus status)
 		{
-			if(GetStatusFlags(notification.Status).Contains("OB"))
-			{ 
-				var remaining = (int)(notification.BatterySecondsRemaining/60);
-				return $"Battery: {notification.Charge}%, Remaining: {remaining} min, Status: {TranslateStatus(notification.Status)}";
+			if (GetStatusFlags(status.Flags).Contains("OB"))
+			{
+				var remaining = (int)(status.BatterySecondsRemaining / 60);
+				return $"Battery: {status.Charge}%\nRemaining: {remaining} min\nStatus: {TranslateStatus(status.Flags)}";
 			}
 
-			return $"Battery: {notification.Charge}%, Status: {TranslateStatus(notification.Status)}";
+			return $"Battery: {status.Charge}%\nStatus: {TranslateStatus(status.Flags)}";
+		}
+
+		public static bool IsOnBattery(this DeviceStatus status)
+		{
+			return GetStatusFlags(status.Flags).Contains("OB");
+		}
+
+		public static bool IsOnline(this DeviceStatus status)
+		{
+			return GetStatusFlags(status.Flags).Contains("OL");
 		}
 	}
 }

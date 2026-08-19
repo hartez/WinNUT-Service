@@ -18,34 +18,39 @@ message DelayRequest {
 
 message Notification {
 	oneof NotificationType {
-		ShutdownInitiatedNotification shutdownInitiated = 1;
-		StatusNotification status = 2;
-		DeviceInfo deviceInfo = 3;
-		ShutdownCanceledNotification shutDownCanceled = 4;
+		ShutdownInitiated shutdown_initiated = 1;
+		DeviceStatus device_status = 2;
+		DeviceInfo device_info = 3;
+		ShutdownCanceled shutDownCanceled = 4;
+		Error error = 5;
 	}
 }
 
-message ShutdownInitiatedNotification {
-	uint32 remaining = 1;
+message ShutdownInitiated {
+	int32 remaining = 1;
 	bool allowDelayRequest = 2; 
 } 
 
-message ShutdownCanceledNotification {
+message ShutdownCanceled {
 }
 
 message ShutdownNotification {
 	oneof NotificationType {
-		ShutdownInitiatedNotification shutdownInitiated = 1;
-		ShutdownCanceledNotification shutDownCanceled = 4;
+		ShutdownInitiated shutdownInitiated = 1;
+		ShutdownCanceled shutDownCanceled = 4;
 	}
 }
 
-message StatusNotification {
-	uint32 charge = 1;
-	string status = 2;
-	uint32 batterySecondsRemaining = 3;
+message DeviceStatus {
+	string flags = 1;
+	int32 charge = 2;
+	int32 battery_seconds_remaining = 3;
 }
 
 message DeviceInfo {
 	map<string, string> deviceAttributes = 1;
+}
+
+message Error {
+	string description = 1;
 }

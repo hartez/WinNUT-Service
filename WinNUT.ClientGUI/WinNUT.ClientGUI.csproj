@@ -3,11 +3,35 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <RootNamespace>WinNUT_ClientGUI</RootNamespace>
+    <RootNamespace>WinNUT.ClientGUI</RootNamespace>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>9999</WarningLevel>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>9999</WarningLevel>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Icons\battery-0-ob.ico" />
+    <None Remove="Icons\battery-0-ol.ico" />
+    <None Remove="Icons\battery-100-ob.ico" />
+    <None Remove="Icons\battery-100-ol.ico" />
+    <None Remove="Icons\battery-25-ob.ico" />
+    <None Remove="Icons\battery-25-ol.ico" />
+    <None Remove="Icons\battery-50-ob.ico" />
+    <None Remove="Icons\battery-50-ol.ico" />
+    <None Remove="Icons\battery-75-ob.ico" />
+    <None Remove="Icons\battery-75-ol.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.27.0" />
