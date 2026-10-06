@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Logging.EventLog;
 using NUTDotNetClient;
+using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using WinNUT.ClientService;
 using WinNUT.gPRC;
 using WinNUT.gPRC.Services;
@@ -16,7 +19,7 @@ var config = new ConfigurationBuilder()
 
 builder.Services.AddWindowsService(options =>
 {
-	options.ServiceName = "NUT Client Service";
+	options.ServiceName = "WinNUT UPS Monitor Service";
 });
 
 LoggerProviderOptions.RegisterProviderOptions<
@@ -48,6 +51,25 @@ builder.Services.AddSingleton<UPSMonitor>();
 builder.Services.AddHostedService<NUTClientWorker>();
 
 builder.Services.AddGrpc();
+
+builder.WebHost.UseNamedPipes(options =>
+{
+	using var serverIdentity = WindowsIdentity.GetCurrent();
+	var pipeSecurity = new PipeSecurity();
+	
+	pipeSecurity.AddAccessRule(new PipeAccessRule(
+		serverIdentity.User!,
+		PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+		AccessControlType.Allow));
+
+	pipeSecurity.AddAccessRule(new PipeAccessRule(
+		"Everyone",
+		PipeAccessRights.ReadWrite,
+		AccessControlType.Allow));
+
+	options.PipeSecurity = pipeSecurity;
+	options.CurrentUserOnly = false;
+});
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {

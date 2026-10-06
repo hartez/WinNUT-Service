@@ -45,14 +45,35 @@ namespace WinNUT.ClientGUI
 			_trayIcon.DoubleClick += (_, _) => ShowDeviceInfo();
 		}
 
-		public async Task Listen()
+		public async Task Subscribe()
 		{
 			var token = _cancellationTokenSource.Token;
 
-			using var channel = CreateChannel();
-			_client = new gPRC.ClientGUI.ClientGUIClient(channel);
-			using var stream = _client.Subscribe(new SubscribeRequest { Subscriber = "WinNUT.ClientGUI Tray Application" });
-			
+			while (!token.IsCancellationRequested) 
+			{
+				try
+				{
+					using var channel = CreateChannel();
+					_client = new gPRC.ClientGUI.ClientGUIClient(channel);
+					using var stream = _client.Subscribe(new SubscribeRequest { Subscriber = "WinNUT.ClientGUI Tray Application" });
+
+					await Listen(stream, token);
+				}
+				catch (Exception ex) 
+				{
+					UpdateError(new Error() { Description = $"Error connecting to the UPS monitor service: {ex.Message}\n"});
+				}
+
+				if (!token.IsCancellationRequested) 
+				{
+					await Task.Delay(60 * 1000);
+					UpdateError(new Error() { Description = "Attempting to connect to the UPS monitor service." });
+				}
+			}
+		}
+
+		async Task Listen(AsyncServerStreamingCall<Notification> stream, CancellationToken token) 
+		{
 			await foreach (var notification in stream.ResponseStream.ReadAllAsync(token))
 			{
 				switch (notification.NotificationTypeCase)
@@ -76,8 +97,6 @@ namespace WinNUT.ClientGUI
 						break;
 				}
 			}
-
-			return;
 		}
 
 		void UpdateUI()

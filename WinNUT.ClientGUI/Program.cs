@@ -9,7 +9,7 @@ namespace WinNUT.ClientGUI
 
 			using var app = new WinNUTTrayApplication();
 
-			Task.Run(() => app.Listen());
+			Task.Run(() => app.Subscribe());
 
 			Application.Run(app);
 		}

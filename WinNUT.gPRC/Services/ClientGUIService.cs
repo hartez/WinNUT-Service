@@ -4,12 +4,12 @@ namespace WinNUT.gPRC.Services
 {
 	public class ClientGUIService(ILogger<ClientGUIService> logger) : ClientGUI.ClientGUIBase, IClientGUIService
 	{
-		private IServerStreamWriter<Notification>? _responseStream;
-		private readonly CancellationTokenSource _cancellationTokenSource = new();
-		private readonly ILogger<ClientGUIService> _logger = logger;
-		private DeviceStatus? _lastStatusUpdate;
-		private Error? _lastError;
-		private DeviceInfo? _deviceInfo;
+		IServerStreamWriter<Notification>? _responseStream;
+		readonly CancellationTokenSource _cancellationTokenSource = new();
+		readonly ILogger<ClientGUIService> _logger = logger;
+		DeviceStatus? _lastStatusUpdate;
+		Error? _lastError;
+		DeviceInfo? _deviceInfo;
 
 		public Func<Task<ShutdownNotification>>? HandleShutdownDelayRequest { get; set; }
 

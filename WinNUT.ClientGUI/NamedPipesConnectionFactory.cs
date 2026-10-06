@@ -5,7 +5,7 @@ namespace WinNUT.ClientGUI
 {
 	public class NamedPipesConnectionFactory(string pipeName)
 	{
-		private readonly string _pipeName = pipeName;
+		readonly string _pipeName = pipeName;
 
 		public async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext _,
 			CancellationToken cancellationToken = default)
