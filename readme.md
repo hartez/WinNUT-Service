@@ -4,7 +4,7 @@ WinNUT-Service is a Windows Service written in .NET. It monitors a UPS connected
 
 This repository also contains a Windows Forms application which lives in the notification area and provides a GUI interface for the service, with a UPS battery status icon and information. 
 
-The NUT server communications in the service are provided via @gbakeman's [nutdotnet] repository. 
+The NUT server communications in the service are provided via [gbakeman](https://github.com/gbakeman)'s [nutdotnet] repository. 
 
 ## Background
 
