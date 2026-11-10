@@ -6,6 +6,8 @@ This repository also contains a Windows Forms application which lives in the not
 
 The NUT server communications in the service are provided via [gbakeman](https://github.com/gbakeman)'s [nutdotnet] repository. 
 
+Take a look at the [project write-up](https://ezhart.com/posts/shutting-down-my-desktop-when-the-power-goes-out) for more info.
+
 ## Background
 
 In my office, I have a Synology NAS and a desktop PC both connected to an APC uninterruptible power supply. The UPS has a USB connection directly to the Synology, which provides a built-in NUT server; allowlisted devices on the local network can query the NUT server for the status of the UPS battery, and the Synology can power itself down safely if the UPS spends too long on battery power (i.e., if the power in our home goes out). 
